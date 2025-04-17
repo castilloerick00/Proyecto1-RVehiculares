@@ -92,3 +92,18 @@ python3 /opt/sumo/tools/visualization/plot_net_dump.py \
     --colormap plasma \
     --color-bar-label "CO₂ (mg)" \
     -o co2_0_10800_map.png
+```
+
+---
+
+## 🎓 Créditos académicos
+
+**Universidad de Cuenca**  
+Facultad de Ingeniería  
+Ingeniería en Telecomunicaciones  
+Asignatura: Redes Vehiculares  
+
+**Autores:**  
+- Erick Castillo  
+- Sebastián Chalco  
+- Felipe Palaguachi

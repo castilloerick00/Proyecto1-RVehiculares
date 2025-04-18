@@ -7,7 +7,7 @@ Este proyecto de simulación busca modelar el tráfico y controlar dinámicament
 ## 📁 Estructura del proyecto
 
 ```
-📁 Simulacion_CO2_Cuenca
+📁 Proyecto1-RVehiculares
 ├── 📂 Escenario
 │   ├── crear_trips.sh
 │   ├── modificar_rutas_buses.py

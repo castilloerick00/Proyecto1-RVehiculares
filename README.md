@@ -8,12 +8,12 @@ Este proyecto de simulación busca modelar el tráfico y controlar dinámicament
 
 ```
 📁 Proyecto1-RVehiculares
+├── 📂 Control
+│   └── control_inteligente_trafico.py
 ├── 📂 Escenario
 │   ├── crear_trips.sh
 │   ├── modificar_rutas_buses.py
 │   └── modificar_rutas.py
-├── 📂 Control
-│   └── control_inteligente_trafico.py
 ├── 📂 Resultados
 │   ├── grafico_co2.py
 │   └── previo.py

@@ -1,6 +1,9 @@
 import os
 import sys
 import traci
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
 
 # Configurar la ruta de SUMO tools
 if 'SUMO_HOME' in os.environ:
@@ -10,13 +13,13 @@ else:
     sys.exit("Por favor, declare la variable de entorno 'SUMO_HOME'")
 
 # Iniciar la simulación con TraCI
-sumoBinary = "sumo-gui"
+sumoBinary = "sumo"
 sumoCmd = [
     sumoBinary,
     "-n", "network_centro.net.xml",
     "-r", "mapa1.rou.xml",
     "--additional-files", "vtypes.add.xml",
-    "--emission-output", "emissions_traci.xml"
+    "--emission-output", "emissions_traci_1.xml"
 ]
 traci.start(sumoCmd)
 
@@ -69,12 +72,34 @@ def adjust_speed_based_on_occupancy(edge):
         traci.lane.setMaxSpeed(laneID, new_speed)
         print(f"Step {step}: Ajustando velocidad del carril {laneID} a {new_speed} debido a ocupación {occupancy}")
 
+# === Variables para análisis ===
+HORA_SIM = 1800
+velocidades_por_hora = {}
+espera_por_hora = {}
+
 # Bucle de simulación
 step = 0
 while traci.simulation.getMinExpectedNumber() > 0:
     traci.simulationStep()
     step += 1
 
+    hora_actual = step // HORA_SIM
+    vehiculos = traci.vehicle.getIDList()
+		
+    # Captura de velocidad promedio
+    velocidades = [traci.vehicle.getSpeed(v) for v in vehiculos if traci.vehicle.getSpeed(v) >= 0]
+    if velocidades:
+        if hora_actual not in velocidades_por_hora:
+            velocidades_por_hora[hora_actual] = []
+        velocidades_por_hora[hora_actual].extend(velocidades)
+
+    # Captura de tiempo de espera
+    tiempos_espera = [traci.vehicle.getWaitingTime(v) for v in vehiculos]
+    if tiempos_espera:
+        if hora_actual not in espera_por_hora:
+            espera_por_hora[hora_actual] = []
+        espera_por_hora[hora_actual].extend(tiempos_espera)
+        
     # Ajuste de costos (cambio de pesos) y redireccionamiento si rerouting está habilitado
     if enable_rerouting and step % 5 == 0:
         for edge in congested_edges:
@@ -105,3 +130,46 @@ while traci.simulation.getMinExpectedNumber() > 0:
 
 # Cerrar la simulación
 traci.close()
+
+# === Función para graficar con intervalo de confianza ===
+def graficar_resultados(datos, titulo, ylabel, color, ylim=None):
+    horas = sorted(datos.keys())
+    medias = [np.mean(datos[h]) for h in horas]
+    conf_intervals = [
+        stats.t.interval(0.95, len(datos[h])-1, loc=np.mean(datos[h]), scale=stats.sem(datos[h]))
+        if len(datos[h]) > 1 else (np.mean(datos[h]), np.mean(datos[h]))
+        for h in horas
+    ]
+    yerr = [abs(m - ci[0]) for m, ci in zip(medias, conf_intervals)]
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(horas, medias, yerr=yerr, capsize=5, color=color, edgecolor='black')
+    plt.xlabel("Hora de simulación")
+    plt.ylabel(ylabel)
+    plt.title(titulo)
+    plt.xticks(horas)
+    
+    # Establecer límites del eje Y si se especifican
+    if ylim:
+        plt.ylim(ylim)
+
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+# === Mostrar ambos gráficos ===
+graficar_resultados(
+    velocidades_por_hora,
+    "Velocidad promedio por hora con intervalo de confianza del 95%",
+    "Velocidad promedio (m/s)",
+    "skyblue",
+    ylim=(0, 8)  # Límite Y específico para el gráfico de velocidad
+)
+
+graficar_resultados(
+    espera_por_hora,
+    "Tiempo promedio de espera por hora con intervalo de confianza del 95%",
+    "Tiempo promedio de espera (s)",
+    "salmon",
+    ylim=(0, 3.7)  # Límite Y específico para el gráfico de tiempo de espera
+)
